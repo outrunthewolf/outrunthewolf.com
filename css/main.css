@@ -1428,6 +1428,10 @@ button.button {
   text-transform: uppercase;
   font-size: 12px; }
 
+.feature ul {
+  margin-left:20px;
+}
+
 .feature__content {
   margin: auto; }
 
