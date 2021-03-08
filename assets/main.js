@@ -25,6 +25,7 @@
 					['edge',		/Edge\/([0-9\.]+)/],
 					['safari',		/Version\/([0-9\.]+).+Safari/],
 					['chrome',		/Chrome\/([0-9\.]+)/],
+					['chrome',		/CriOS\/([0-9\.]+)/],
 					['ie',			/Trident\/.+rv:([0-9]+)/]
 				];
 	
@@ -172,6 +173,10 @@
 				&&	!h.match(/^[a-zA-Z]/))
 					h = 'x' + h;
 	
+			// Convert to lowercase.
+				if (typeof h == 'string')
+					h = h.toLowerCase();
+	
 			return h;
 	
 		},
@@ -286,6 +291,116 @@
 			// Scroll to top.
 				scrollToElement(null);
 	
+		},
+		loadElements = function(parent) {
+	
+			var a, e, x, i;
+	
+			// IFRAMEs.
+	
+				// Get list of unloaded IFRAMEs.
+					a = parent.querySelectorAll('iframe[data-src]:not([data-src=""])');
+	
+				// Step through list.
+					for (i=0; i < a.length; i++) {
+	
+						// Load.
+							a[i].src = a[i].dataset.src;
+	
+						// Mark as loaded.
+							a[i].dataset.src = "";
+	
+					}
+	
+			// Video.
+	
+				// Get list of videos (autoplay).
+					a = parent.querySelectorAll('video[autoplay]');
+	
+				// Step through list.
+					for (i=0; i < a.length; i++) {
+	
+						// Play if paused.
+							if (a[i].paused)
+								a[i].play();
+	
+					}
+	
+			// Autofocus.
+	
+				// Get first element with data-autofocus attribute.
+					e = parent.querySelector('[data-autofocus="1"]');
+	
+				// Determine type.
+					x = e ? e.tagName : null;
+	
+					switch (x) {
+	
+						case 'FORM':
+	
+							// Get first input.
+								e = e.querySelector('.field input, .field select, .field textarea');
+	
+							// Found? Focus.
+								if (e)
+									e.focus();
+	
+							break;
+	
+						default:
+							break;
+	
+					}
+	
+		},
+		unloadElements = function(parent) {
+	
+			var a, e, x, i;
+	
+			// IFRAMEs.
+	
+				// Get list of loaded IFRAMEs.
+					a = parent.querySelectorAll('iframe[data-src=""]');
+	
+				// Step through list.
+					for (i=0; i < a.length; i++) {
+	
+						// Don't unload? Skip.
+							if (a[i].dataset.srcUnload === '0')
+								continue;
+	
+						// Mark as unloaded.
+							a[i].dataset.src = a[i].src;
+	
+						// Unload.
+							a[i].src = '';
+	
+					}
+	
+			// Video.
+	
+				// Get list of videos.
+					a = parent.querySelectorAll('video');
+	
+				// Step through list.
+					for (i=0; i < a.length; i++) {
+	
+						// Pause if playing.
+							if (!a[i].paused)
+								a[i].pause();
+	
+					}
+	
+			// Autofocus.
+	
+				// Get focused element.
+					e = $(':focus');
+	
+				// Found? Blur.
+					if (e)
+						e.blur();
+	
+	
 		};
 	
 		// Expose scrollToElement.
@@ -306,7 +421,7 @@
 		(function() {
 	
 			var initialSection, initialScrollPoint, initialId,
-				header, footer, name, hideHeader, hideFooter,
+				header, footer, name, hideHeader, hideFooter, disableAutoScroll,
 				h, e, ee, k,
 				locked = false,
 				doNext = function() {
@@ -357,75 +472,37 @@
 					location.href = '#' + section.id.replace(/-section$/, '');
 	
 				},
-				loadElements = function(parent) {
+				doEvent = function(id, type) {
 	
-					var a, i;
+					var name = id.split(/-[a-z]+$/)[0], i;
 	
-					// IFRAMEs.
-	
-						// Get list of unloaded IFRAMEs.
-							a = parent.querySelectorAll('iframe[data-src]:not([data-src=""])');
-	
-						// Step through list.
-							for (i=0; i < a.length; i++) {
-	
-								// Load.
-									a[i].src = a[i].dataset.src;
-	
-								// Mark as loaded.
-									a[i].dataset.src = "";
-	
-							}
-	
-					// Video.
-	
-						// Get list of videos (autoplay).
-							a = parent.querySelectorAll('video[autoplay]');
-	
-						// Step through list.
-							for (i=0; i < a.length; i++) {
-	
-								// Play.
-									a[i].play();
-	
-							}
+					if (name in sections
+					&&	'events' in sections[name]
+					&&	type in sections[name].events)
+						for (i in sections[name].events[type])
+							(sections[name].events[type][i])();
 	
 				},
-				unloadElements = function(parent) {
-	
-					var a, i;
-	
-					// IFRAMEs.
-	
-						// Get list of loaded IFRAMEs.
-							a = parent.querySelectorAll('iframe[data-src=""]');
-	
-						// Step through list.
-							for (i=0; i < a.length; i++) {
-	
-								// Mark as unloaded.
-									a[i].dataset.src = a[i].src;
-	
-								// Unload.
-									a[i].src = '';
-	
-							}
-	
-					// Video.
-	
-						// Get list of videos.
-							a = parent.querySelectorAll('video');
-	
-						// Step through list.
-							for (i=0; i < a.length; i++) {
-	
-								// Pause.
-									a[i].pause();
-	
-							}
-	
-				},
-				sections = {};
+				sections = {
+					'resume': {
+						events: {
+							onopen: [
+								function() { 
+									gtag('config', 'UA-34540071-1', { 'page_path': '/#resume' });
+								},
+							],
+						},
+					},
+					'home': {
+						events: {
+							onopen: [
+								function() { 
+									gtag('config', 'UA-34540071-1', { 'page_path': '/' });
+								},
+							],
+						},
+					},
+				};
 	
 			// Expose doNext, doPrevious, doFirst, doLast.
 				window._next = doNext;
@@ -509,12 +586,15 @@
 	
 							}
 	
+					// Get options.
+						name = (h ? h : 'home');
+						hideHeader = name ? ((name in sections) && ('hideHeader' in sections[name]) && sections[name].hideHeader) : false;
+						hideFooter = name ? ((name in sections) && ('hideFooter' in sections[name]) && sections[name].hideFooter) : false;
+						disableAutoScroll = name ? ((name in sections) && ('disableAutoScroll' in sections[name]) && sections[name].disableAutoScroll) : false;
+	
 					// Deactivate all sections (except initial).
 	
 						// Initially hide header and/or footer (if necessary).
-							name = (h ? h : 'home');
-							hideHeader = name ? ((name in sections) && ('hideHeader' in sections[name]) && sections[name].hideHeader) : false;
-							hideFooter = name ? ((name in sections) && ('hideFooter' in sections[name]) && sections[name].hideFooter) : false;
 	
 							// Header.
 								if (header && hideHeader) {
@@ -545,11 +625,15 @@
 					// Activate initial section.
 						initialSection.classList.add('active');
 	
+						// Event: On Open.
+							doEvent(initialId, 'onopen');
+	
 					// Load elements.
 						loadElements(initialSection);
 	
-				 	// Scroll to top.
-						scrollToElement(null, 'instant');
+					// Scroll to top (if not disabled for this section).
+						if (!disableAutoScroll)
+							scrollToElement(null, 'instant');
 	
 				// Load event.
 					on('load', function() {
@@ -564,7 +648,7 @@
 				on('hashchange', function(event) {
 	
 					var section, scrollPoint, id, sectionHeight, currentSection, currentSectionHeight,
-						name, hideHeader, hideFooter,
+						name, hideHeader, hideFooter, disableAutoScroll,
 						h, e, ee, k;
 	
 					// Lock.
@@ -617,12 +701,16 @@
 					// Section already active?
 						if (!section.classList.contains('inactive')) {
 	
+							// Get options.
+								name = (section ? section.id.replace(/-section$/, '') : null);
+								disableAutoScroll = name ? ((name in sections) && ('disableAutoScroll' in sections[name]) && sections[name].disableAutoScroll) : false;
+	
 						 	// Scroll to scroll point (if applicable).
 						 		if (scrollPoint)
 									scrollToElement(scrollPoint);
 	
-							// Otherwise, just scroll to top.
-								else
+							// Otherwise, just scroll to top (if not disabled for this section).
+								else if (!disableAutoScroll)
 									scrollToElement(null);
 	
 							// Bail.
@@ -640,12 +728,15 @@
 								if (location.hash == '#home')
 									history.replaceState(null, null, '#');
 	
+							// Get options.
+								name = (section ? section.id.replace(/-section$/, '') : null);
+								hideHeader = name ? ((name in sections) && ('hideHeader' in sections[name]) && sections[name].hideHeader) : false;
+								hideFooter = name ? ((name in sections) && ('hideFooter' in sections[name]) && sections[name].hideFooter) : false;
+								disableAutoScroll = name ? ((name in sections) && ('disableAutoScroll' in sections[name]) && sections[name].disableAutoScroll) : false;
+	
 							// Deactivate current section.
 	
 								// Hide header and/or footer (if necessary).
-									name = (section ? section.id.replace(/-section$/, '') : null);
-									hideHeader = name ? ((name in sections) && ('hideHeader' in sections[name]) && sections[name].hideHeader) : false;
-									hideFooter = name ? ((name in sections) && ('hideFooter' in sections[name]) && sections[name].hideFooter) : false;
 	
 									// Header.
 										if (header && hideHeader) {
@@ -672,6 +763,9 @@
 								// Unload elements.
 									unloadElements(currentSection);
 	
+								// Event: On Close.
+									doEvent(currentSection.id, 'onclose');
+	
 							// Activate target section.
 	
 								// Show header and/or footer (if necessary).
@@ -697,6 +791,9 @@
 									section.classList.add('active');
 									section.style.display = '';
 	
+								// Event: On Open.
+									doEvent(section.id, 'onopen');
+	
 							// Trigger 'resize' event.
 								trigger('resize');
 	
@@ -707,8 +804,8 @@
 								if (scrollPoint)
 									scrollToElement(scrollPoint, 'instant');
 	
-							// Otherwise, just scroll to top.
-								else
+							// Otherwise, just scroll to top (if not disabled for this section).
+								else if (!disableAutoScroll)
 									scrollToElement(null, 'instant');
 	
 							// Unlock.
